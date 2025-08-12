@@ -111,19 +111,28 @@ jobs:
             echo "core_changes=false" >> $GITHUB_ENV
           fi
 
-      - name: ✅ Validate Feature Branch Requirements
-        if: steps.branch-info.outputs.is_feature_branch == 'true' && github.event_name == 'pull_request'
+      - name: ✅ Validate Branch Flow
+        if: github.event_name == 'pull_request'
         run: |
-          echo "🔧 Validando requisitos para rama feature -> developer"
+          echo "🔧 Validando flujo de ramas..."
+          echo "🌿 Source: ${{ steps.branch-info.outputs.source_branch }}"
+          echo "🎯 Target: ${{ steps.branch-info.outputs.target_branch }}"
           
-          # Verificar que el target sea developer
-          if [ "${{ steps.branch-info.outputs.target_branch }}" != "developer" ] && [ "${{ steps.branch-info.outputs.target_branch }}" != "develop" ]; then
-            echo "❌ ERROR: Las ramas feature solo pueden hacer PR hacia 'developer' o 'develop'"
-            echo "   Rama destino actual: ${{ steps.branch-info.outputs.target_branch }}"
+          # Solo permitir developer -> main
+          if [ "${{ steps.branch-info.outputs.target_branch }}" == "main" ] && [ "${{ steps.branch-info.outputs.source_branch }}" != "developer" ]; then
+            echo "❌ ERROR: Solo la rama 'developer' puede hacer PR hacia 'main'"
+            echo "   Rama origen actual: ${{ steps.branch-info.outputs.source_branch }}"
             exit 1
           fi
           
-          echo "✅ Rama destino válida: ${{ steps.branch-info.outputs.target_branch }}"
+          # Feature branches pueden ir a developer
+          if [[ "${{ steps.branch-info.outputs.source_branch }}" == feature/* ]] && [ "${{ steps.branch-info.outputs.target_branch }}" == "developer" ]; then
+            echo "✅ Feature branch -> developer: VÁLIDO"
+          elif [ "${{ steps.branch-info.outputs.source_branch }}" == "developer" ] && [ "${{ steps.branch-info.outputs.target_branch }}" == "main" ]; then
+            echo "✅ Developer -> main: VÁLIDO"
+          else
+            echo "✅ Flujo de rama válido"
+          fi
 
       - name: 🎯 Final Validation
         run: |
