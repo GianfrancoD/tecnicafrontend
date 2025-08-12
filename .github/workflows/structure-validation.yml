@@ -1,0 +1,206 @@
+name: 🏗️ Complete CI/CD Pipeline
+
+on:
+  pull_request:
+    branches: 
+      - developer
+      - develop
+      - main
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'src/core/**'
+      - 'tests/**'
+      
+  push:
+    branches:
+      - developer
+      - develop
+    paths:
+      - 'src/core/**'
+
+  # Permitir ejecución manual
+  workflow_dispatch:
+    inputs:
+      debug:
+        description: 'Enable debug mode'
+        required: false
+        default: 'false'
+        type: boolean
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  structure-validation:
+    name: 🔍 Validate Core Structure
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Necesario para comparar cambios
+
+      - name: 🏷️ Extract Branch Info
+        id: branch-info
+        run: |
+          echo "source_branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
+          echo "target_branch=${GITHUB_BASE_REF:-developer}" >> $GITHUB_OUTPUT
+          echo "is_feature_branch=$([[ ${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}} == feature/* ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+
+      - name: 📊 Show Branch Information
+        run: |
+          echo "🌿 Source Branch: ${{ steps.branch-info.outputs.source_branch }}"
+          echo "🎯 Target Branch: ${{ steps.branch-info.outputs.target_branch }}"
+          echo "🔧 Is Feature Branch: ${{ steps.branch-info.outputs.is_feature_branch }}"
+
+      - name: ⚡ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 🔧 Install Dependencies
+        run: |
+          echo "📦 Installing dependencies..."
+          npm ci --prefer-offline --no-audit
+          
+      - name: 🔍 TypeScript Validation
+        id: typescript-check
+        run: |
+          echo "🔍 Validando tipos TypeScript..."
+          npx tsc --noEmit
+        continue-on-error: true
+
+      - name: 🧪 Run Structure Tests
+        id: structure-tests
+        run: |
+          echo "🔍 Ejecutando tests de validación de estructura..."
+          npm run test:structure
+        continue-on-error: true
+
+      - name: 📋 Generate Structure Report
+        run: |
+          echo "📊 Generando reporte de estructura..."
+          npm run test:ci || echo "⚠️ Tests fallaron, pero continuamos para generar reporte"
+          
+      - name: 📤 Upload Structure Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: structure-validation-report
+          path: |
+            structure-report.json
+            test-results.xml
+          retention-days: 30
+
+      - name: 🔍 Analyze Structure Changes
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "🔍 Analizando cambios en estructura..."
+          
+          # Verificar si hay cambios en la estructura core
+          CORE_CHANGES=$(git diff --name-only origin/${{ steps.branch-info.outputs.target_branch }}...HEAD | grep '^src/core/' || echo "")
+          
+          if [ -n "$CORE_CHANGES" ]; then
+            echo "📁 Cambios detectados en src/core/:"
+            echo "$CORE_CHANGES"
+            echo "core_changes=true" >> $GITHUB_ENV
+          else
+            echo "✅ No hay cambios en src/core/"
+            echo "core_changes=false" >> $GITHUB_ENV
+          fi
+
+      - name: ✅ Validate Feature Branch Requirements
+        if: steps.branch-info.outputs.is_feature_branch == 'true' && github.event_name == 'pull_request'
+        run: |
+          echo "🔧 Validando requisitos para rama feature -> developer"
+          
+          # Verificar que el target sea developer
+          if [ "${{ steps.branch-info.outputs.target_branch }}" != "developer" ] && [ "${{ steps.branch-info.outputs.target_branch }}" != "develop" ]; then
+            echo "❌ ERROR: Las ramas feature solo pueden hacer PR hacia 'developer' o 'develop'"
+            echo "   Rama destino actual: ${{ steps.branch-info.outputs.target_branch }}"
+            exit 1
+          fi
+          
+          echo "✅ Rama destino válida: ${{ steps.branch-info.outputs.target_branch }}"
+
+      - name: 🎯 Final Validation
+        run: |
+          echo "🎯 Validación final completa..."
+          
+          # Verificar TypeScript primero
+          if [ "${{ steps.typescript-check.outcome }}" != "success" ]; then
+            echo "❌ Los tipos TypeScript fallaron. Re-ejecutando para obtener detalles..."
+            npx tsc --noEmit || {
+              echo "💥 ERRORES DE TYPESCRIPT - El PR no puede ser aprobado"
+              echo "📋 Revisa los errores de tipos arriba"
+              exit 1
+            }
+          fi
+          
+          # Re-ejecutar tests si fallaron antes
+          if [ "${{ steps.structure-tests.outcome }}" != "success" ]; then
+            echo "❌ Los tests de estructura fallaron. Re-ejecutando para obtener detalles..."
+            npm run test:structure || {
+              echo "💥 ESTRUCTURA INVÁLIDA - El PR no puede ser aprobado"
+              echo "📋 Revisa los errores de estructura arriba"
+              exit 1
+            }
+          fi
+          
+          echo "✅ Validación completa exitosa - PR puede ser aprobado"
+
+      - name: 💬 Comment on PR
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const success = '${{ steps.structure-tests.outcome }}' === 'success';
+            const coreChanges = process.env.core_changes === 'true';
+            
+            let comment = `## 🏗️ Structure Validation Report\n\n`;
+            
+            if (success) {
+              comment += `✅ **Structure validation passed!**\n\n`;
+            } else {
+              comment += `❌ **Structure validation failed!**\n\n`;
+            }
+            
+            comment += `📊 **Details:**\n`;
+            comment += `- Source: \`${{ steps.branch-info.outputs.source_branch }}\`\n`;
+            comment += `- Target: \`${{ steps.branch-info.outputs.target_branch }}\`\n`;
+            comment += `- Core changes: ${coreChanges ? '✅ Yes' : '❌ No'}\n`;
+            
+            if (!success) {
+              comment += `\n⚠️ **Action required:** Please fix the structure issues before merging.\n`;
+              comment += `📋 Check the "Structure Validation" job details for specific errors.\n`;
+            }
+            
+            comment += `\n🔗 [View full report in Actions](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      - name: 📈 Set Status Check
+        if: always()
+        run: |
+          if [ "${{ steps.typescript-check.outcome }}" == "success" ] && [ "${{ steps.structure-tests.outcome }}" == "success" ]; then
+            echo "✅ All validations passed"
+            echo "VALIDATION_STATUS=success" >> $GITHUB_ENV
+          else
+            echo "❌ Validation failed"  
+            if [ "${{ steps.typescript-check.outcome }}" != "success" ]; then
+              echo "❌ TypeScript validation failed"
+            fi
+            if [ "${{ steps.structure-tests.outcome }}" != "success" ]; then
+              echo "❌ Structure validation failed"
+            fi
+            echo "VALIDATION_STATUS=failure" >> $GITHUB_ENV
+            exit 1
+          fi

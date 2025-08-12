@@ -1,70 +1,434 @@
-# Getting Started with Create React App
+# 🏗️ Prueba Técnica Frontend - React + TypeScript
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## 📋 Descripción del Proyecto
 
-## Available Scripts
+Este proyecto es una **prueba técnica frontend** que implementa una aplicación completa de gestión con React + TypeScript, incluyendo autenticación, dashboard y módulo de productos. El objetivo es evaluar las habilidades para:
 
-In the project directory, you can run:
+- 🐛 **Identificar y solucionar errores** de TypeScript
+- 🏗️ **Trabajar con arquitectura modular** bien estructurada
+- ⚛️ **Debugging de aplicaciones React** complejas
+- 🔧 **Manejo de tipos e interfaces** TypeScript
+- 🎯 **Resolución de problemas** en código existente
 
-### `npm start`
+## 🎯 Objetivos de la Prueba
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+### 1. **Estructura de Carpetas (25 puntos)**
+- Mantener la arquitectura `core` con módulos dinámicos
+- Validar que la estructura siga las convenciones establecidas
+- Cada módulo debe tener las 8 carpetas requeridas
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+### 2. **Resolución de Errores (50 puntos)** 
+- Identificar y corregir **2 errores principales** (8 errores de TypeScript en total)
+- Hacer que la aplicación funcione sin warnings ni errores
 
-### `npm test`
+### 3. **Testing Dinámico (25 puntos)**
+- Entender el sistema de testing de estructura
+- Ejecutar y validar que todos los tests pasen
+- Opcional: Agregar tests adicionales
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### 4. **Funcionalidad (25 puntos)**
+- Completar el módulo de productos
+- Navegar y usar todas las funcionalidades
+- Opcional: Agregar nuevas características
 
-### `npm run build`
+---
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## 🚀 Setup Inicial
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Prerrequisitos
+- Node.js 18+ 
+- npm o yarn
+- Git
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### Instalación
+```bash
+# Clonar el repositorio
+git clone [repository-url]
+cd tecnicafrontend
 
-### `npm run eject`
+# Instalar dependencias
+npm install
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+# Intentar ejecutar la aplicación (fallará con errores)
+npm start
+```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+---
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+## 🐛 Errores a Resolver
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+El proyecto tiene **2 errores principales de TypeScript** que debes encontrar y corregir:
 
-## Learn More
+### ❌ Error 1: Tipo Incorrecto en LoginForm
+**Archivo**: `src/core/auth/components/forms/LoginForm.tsx`  
+**Línea**: ~7  
+**Error**: Usa `FormData` (tipo nativo del navegador) en lugar de `LoginFormData`  
+**Síntoma**: 7 errores de TypeScript sobre propiedades que no existen
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+```typescript
+// ❌ Incorrecto
+const [formData, setFormData] = useState<FormData>({
+  email: '',
+  password: ''
+});
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+// ✅ Correcto  
+const [formData, setFormData] = useState<LoginFormData>({
+  email: '',
+  password: ''
+});
+```
 
-### Code Splitting
+**Errores que causa**:
+- `Property 'email' does not exist on type 'FormData'`
+- `Property 'password' does not exist on type 'FormData'`
+- Y 5 errores más relacionados
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+### ❌ Error 2: Método Faltante en productApi
+**Archivo**: `src/core/products/services/productApi.ts`  
+**Línea**: N/A (método faltante)  
+**Error**: El hook `useProducts` intenta llamar `productApi.searchProducts()` pero no existe  
+**Síntoma**: `Property 'searchProducts' does not exist on type 'ProductApiService'`
 
-### Analyzing the Bundle Size
+```typescript
+// ❌ Problema: En useProducts.ts se intenta usar
+const results = await productApi.searchProducts(searchTerm);
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+// ✅ Solución: Agregar el método en productApi.ts
+searchProducts: async (query: string): Promise<Product[]> => {
+  // Implementar búsqueda
+}
+```
 
-### Making a Progressive Web App
+### 📝 Cómo Identificar los Errores
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+1. **Ejecuta el verificador de TypeScript**:
+```bash
+npx tsc --noEmit
+```
 
-### Advanced Configuration
+2. **Lee cuidadosamente los errores**:
+   - 7 errores en `LoginForm.tsx` (todos relacionados con tipos)
+   - 1 error en `useProducts.ts` (método faltante)
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+3. **Sigue las pistas de TypeScript** para encontrar las soluciones
 
-### Deployment
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+## 🧪 Testing de Estructura
 
-### `npm run build` fails to minify
+### Ejecutar Tests
+```bash
+# Ejecutar tests de estructura
+npm run test:structure
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+# Ejecutar en modo watch
+npm run test:structure:watch
+
+# Ejecutar con interfaz visual
+npm run test:structure:ui
+```
+
+### Sistema de Testing Dinámico
+
+El proyecto incluye un **sistema de testing dinámico** que:
+
+- 🔍 **Detecta automáticamente** módulos en `src/core/`
+- ✅ **Valida estructura** sin nombres hardcodeados
+- 📊 **Genera reportes** detallados de cobertura
+- 🏗️ **Verifica arquitectura** de cada módulo
+
+### Estructura Validada
+```
+src/core/
+├── shared/           # ✅ Componentes compartidos
+│   ├── common/       # ✅ Elementos UI básicos
+│   ├── forms/        # ✅ Formularios reutilizables
+│   ├── views/        # ✅ Layouts compartidos
+│   └── cards/        # ✅ Tarjetas genéricas
+│
+├── [módulo]/         # ✅ Cualquier nombre de módulo
+│   ├── components/   # ✅ Componentes del módulo
+│   ├── validations/  # ✅ Esquemas de validación
+│   ├── hooks/        # ✅ Custom hooks
+│   ├── services/     # ✅ APIs y lógica de negocio
+│   ├── types/        # ✅ Tipos TypeScript
+│   ├── utils/        # ✅ Funciones utilitarias
+│   ├── contexts/     # ✅ Contextos React
+│   └── constants/    # ✅ Constantes del módulo
+```
+
+---
+
+## 🚀 Flujo CI/CD
+
+### GitHub Actions Workflows
+
+#### 1. **Structure Validation** (feature → developer)
+**Archivo**: `.github/workflows/structure-validation.yml`
+
+```yaml
+# Se ejecuta cuando:
+- PR hacia developer/develop  
+- Push a developer/develop
+- Cambios en src/core/** o tests/**
+```
+
+**Validaciones**:
+- ✅ Testing de estructura de carpetas
+- ✅ Verificación de módulos dinámicos  
+- ✅ Validación de subcarpetas requeridas
+- ✅ Comentarios automáticos en PR
+
+#### 2. **Promote to Main** (developer → main)  
+**Archivo**: `.github/workflows/promote-to-main.yml`
+
+```yaml
+# Se ejecuta cuando:
+- PR de developer hacia main
+- Push exitoso a developer (auto-PR)
+```
+
+**Validaciones**:
+- ✅ Testing completo de estructura
+- ✅ Validación de contenido en módulos
+- ✅ Build de producción
+- ✅ Verificación que módulos no estén vacíos
+
+### Flujo de Trabajo
+
+```mermaid
+graph LR
+    A[Feature Branch] --> B[PR to Developer]
+    B --> C[Structure Tests]
+    C --> D[Merge to Developer]
+    D --> E[Content Validation]
+    E --> F[Auto PR to Main]
+    F --> G[Production Ready]
+```
+
+---
+
+## ⚛️ Módulo de Productos
+
+### Funcionalidades Implementadas
+
+#### 🏠 Vista Principal (`ProductsView`)
+- **Dashboard de estadísticas** (total, en stock, sin stock)
+- **Búsqueda avanzada** por nombre, descripción, tags
+- **Filtros por categoría**
+- **Lista responsive** de productos
+- **CRUD básico** (ver, editar, eliminar)
+
+#### 🃏 Tarjeta de Producto (`ProductCard`)  
+- **Imagen** del producto con fallback
+- **Información detallada** (precio, stock, categoría)
+- **Tags dinámicos** con límite visual
+- **Estados visuales** (sin stock, nuevo, etc.)
+- **Acciones rápidas** (ver, editar, eliminar)
+
+#### 🎣 Hook Personalizado (`useProducts`)
+- **Estado centralizado** de productos
+- **Operaciones CRUD** completas
+- **Filtros dinámicos** aplicables
+- **Gestión de errores** integrada
+- **Loading states** automáticos
+
+#### 🌐 API Service (`productApi`)
+- **Datos mock realistas** para demostración
+- **5 productos de ejemplo** con imágenes
+- **4 categorías** (Tecnología, Ropa, Hogar, Deportes)
+- **Simulación de latencia** de red
+- **Operaciones async** completas
+
+### Navegación
+1. **Login** → Dashboard (admin@test.com / password)
+2. **Dashboard** → Click en card "Productos" 
+3. **Productos** → Vista completa de gestión
+
+---
+
+## 📁 Estructura del Proyecto
+
+```
+tecnicafrontend/
+├── src/
+│   ├── core/                        # 🏗️ Arquitectura principal
+│   │   ├── shared/                  # 🔄 Recursos compartidos
+│   │   │   ├── common/
+│   │   │   ├── forms/
+│   │   │   ├── views/
+│   │   │   └── cards/
+│   │   │
+│   │   ├── auth/                    # 🔐 Módulo autenticación
+│   │   │   ├── components/
+│   │   │   │   ├── forms/           # ❌ LoginForm (Error 3,4)
+│   │   │   │   ├── common/
+│   │   │   │   ├── views/
+│   │   │   │   └── cards/
+│   │   │   ├── contexts/            # AuthContext
+│   │   │   ├── hooks/
+│   │   │   ├── services/
+│   │   │   ├── types/
+│   │   │   ├── utils/
+│   │   │   ├── validations/
+│   │   │   └── constants/
+│   │   │
+│   │   ├── dashboard/               # 📊 Módulo dashboard  
+│   │   │   ├── components/
+│   │   │   │   └── views/           # ❌ Dashboard (Error 1,2)
+│   │   │   └── [otras carpetas...]
+│   │   │
+│   │   └── products/                # 📦 Módulo productos
+│   │       ├── components/
+│   │       │   ├── cards/           # ProductCard
+│   │       │   └── views/           # ProductsView  
+│   │       ├── hooks/               # useProducts
+│   │       ├── services/            # productApi
+│   │       ├── types/               # Product interfaces
+│   │       └── [otras carpetas...]
+│   │
+│   ├── App.js                       # 🚀 Router principal
+│   └── index.js                     # 📍 Entry point
+│
+├── tests/
+│   └── structure/                   # 🧪 Tests dinámicos
+│       ├── structure.test.js        # Test principal
+│       ├── structureValidator.js    # Validador dinámico
+│       └── expectedStructure.js     # Configuración
+│
+├── .github/workflows/               # 🚀 GitHub Actions
+│   ├── structure-validation.yml    # CI para developer
+│   └── promote-to-main.yml         # CD para main
+│
+└── package.json                     # 📦 Dependencias y scripts
+```
+
+---
+
+## 🎯 Instrucciones de Resolución
+
+### Paso 1: Identificar Errores (25 pts)
+1. **Ejecutar** `npm start` → Observar errores en consola
+2. **Revisar** archivos mencionados en la sección "Errores"
+3. **Corregir** uno por uno hasta que la app funcione
+4. **Verificar** que no haya warnings en la consola
+
+### Paso 2: Validar Testing (25 pts)  
+1. **Ejecutar** `npm run test:structure`
+2. **Verificar** que todos los tests pasen (11/11)
+3. **Entender** el reporte de estructura generado
+4. **Opcional**: Agregar un nuevo módulo y ver que se detecte
+
+### Paso 3: Probar Funcionalidad (25 pts)
+1. **Login** con credenciales: `admin@test.com` / `password`  
+2. **Navegar** desde Dashboard → Productos
+3. **Probar** búsqueda, filtros, eliminación
+4. **Verificar** que las estadísticas se actualicen
+
+### Paso 4: Entender CI/CD (25 pts)
+1. **Revisar** archivos en `.github/workflows/`
+2. **Entender** el flujo feature → developer → main
+3. **Opcional**: Crear una feature branch y PR
+4. **Opcional**: Modificar validaciones de testing
+
+---
+
+## 📚 Scripts Disponibles
+
+```bash
+# 🚀 Desarrollo
+npm start                    # Ejecutar en modo desarrollo  
+npm run build               # Build de producción
+
+# 🧪 Testing  
+npm run test:structure      # Tests de estructura
+npm run test:structure:watch # Tests en modo watch
+npm run test:structure:ui   # Interfaz visual de tests
+npm run test:ci            # Tests para CI (JSON output)
+
+# 🔍 Otros
+npm run test               # Tests unitarios (React)
+```
+
+---
+
+## 🏆 Criterios de Evaluación
+
+### Excelente (90-100 pts)
+- ✅ Todos los errores corregidos sin ayuda
+- ✅ Tests pasando al 100%
+- ✅ Funcionalidad completa probada
+- ✅ Comprensión clara del CI/CD
+- ✅ Mejoras o funcionalidades adicionales
+
+### Bueno (70-89 pts)  
+- ✅ 3-4 errores corregidos
+- ✅ Tests mayormente pasando
+- ✅ Funcionalidad básica funcionando
+- ✅ Entendimiento general del proyecto
+
+### Aceptable (50-69 pts)
+- ✅ 2-3 errores corregidos  
+- ✅ Algunos tests pasando
+- ✅ App ejecutándose básicamente
+- ⚠️ Necesita ayuda para CI/CD
+
+### Insuficiente (<50 pts)
+- ❌ Errores sin corregir
+- ❌ Tests fallando
+- ❌ App no funciona correctamente
+
+---
+
+## 🤝 Preguntas de la Entrevista
+
+Prepárate para explicar:
+
+1. **🏗️ Arquitectura**: ¿Por qué esta estructura de carpetas es escalable?
+
+2. **🧪 Testing**: ¿Cómo funciona el sistema dinámico de detección de módulos?
+
+3. **🐛 Debugging**: ¿Qué proceso seguiste para encontrar los errores?
+
+4. **⚛️ React**: ¿Cómo organizaste el estado y la lógica en el módulo de productos?
+
+5. **🚀 DevOps**: ¿Cuál es la ventaja del flujo CI/CD implementado?
+
+6. **🔄 Escalabilidad**: ¿Cómo agregarías un nuevo módulo (ej: "orders")?
+
+---
+
+## 🔧 Tecnologías Utilizadas
+
+- **⚛️ React 19** - Frontend framework
+- **🎨 TailwindCSS** - Styling y diseño
+- **🧪 Vitest** - Testing framework
+- **🚀 GitHub Actions** - CI/CD
+- **📡 React Router** - Navegación SPA
+- **🎣 Custom Hooks** - Lógica reutilizable
+- **📦 Context API** - Estado global
+- **🔷 TypeScript interfaces** - Tipado fuerte
+
+---
+
+## 💡 Tips para el Éxito
+
+- 🔍 **Lee los errores** en consola cuidadosamente
+- 🧪 **Ejecuta tests** frecuentemente durante el desarrollo  
+- 🎯 **Usa las herramientas** de desarrollo de React
+- 📖 **Revisa la estructura** antes de hacer cambios
+- 🚀 **Prueba la navegación** completa de la app
+- 💬 **Haz preguntas** si algo no está claro
+
+---
+
+## 🎉 ¡Buena Suerte!
+
+Esta prueba técnica está diseñada para evaluar tus habilidades reales de desarrollo frontend. **Tómate tu tiempo**, **lee cuidadosamente** y **demuestra tu capacidad** para trabajar con código existente, resolver problemas y entender arquitecturas complejas.
+
+**¡Esperamos ver tu solución!** 🚀
+
+---
+
+*Creado con ❤️ para evaluar desarrolladores frontend talentosos*

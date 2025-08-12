@@ -1,0 +1,246 @@
+name: 🚀 Promote to Main
+
+on:
+  pull_request:
+    branches: 
+      - main
+    types: [opened, synchronize, reopened]
+    
+  push:
+    branches:
+      - developer
+      - develop
+
+  workflow_dispatch:
+    inputs:
+      force_deploy:
+        description: 'Force deploy to main'
+        required: false
+        default: 'false'
+        type: boolean
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  validate-for-production:
+    name: 🔍 Production Validation
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && (github.base_ref == 'main' || github.head_ref == 'developer')
+    
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🏷️ Extract Branch Info
+        id: branch-info
+        run: |
+          echo "source_branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
+          echo "target_branch=${GITHUB_BASE_REF:-main}" >> $GITHUB_OUTPUT
+          echo "is_developer_branch=$([[ ${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}} == developer ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+
+      - name: ✅ Validate Source Branch
+        run: |
+          echo "🌿 Source: ${{ steps.branch-info.outputs.source_branch }}"
+          echo "🎯 Target: ${{ steps.branch-info.outputs.target_branch }}"
+          
+          # Solo permitir developer -> main
+          if [ "${{ steps.branch-info.outputs.target_branch }}" == "main" ] && [ "${{ steps.branch-info.outputs.source_branch }}" != "developer" ]; then
+            echo "❌ ERROR: Solo la rama 'developer' puede hacer PR hacia 'main'"
+            echo "   Rama origen actual: ${{ steps.branch-info.outputs.source_branch }}"
+            exit 1
+          fi
+          
+          echo "✅ Rama origen válida para producción"
+
+      - name: ⚡ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 🔧 Install Dependencies
+        run: |
+          echo "📦 Installing dependencies for production validation..."
+          npm ci --prefer-offline --no-audit
+
+      - name: 🔍 TypeScript Production Check
+        id: typescript-check
+        run: |
+          echo "🔍 Validando tipos TypeScript para producción..."
+          npx tsc --noEmit
+          echo "✅ TypeScript validation pasó"
+
+      - name: 🧪 Run Full Test Suite
+        id: full-tests
+        run: |
+          echo "🧪 Ejecutando suite completa de tests para producción..."
+          npm run test:structure
+          echo "✅ Tests de estructura pasaron"
+
+      - name: 🔍 Validate Module Content
+        id: content-validation
+        run: |
+          echo "🔍 Validando contenido de módulos..."
+          
+          # Verificar que los módulos no estén vacíos
+          MODULES_WITH_CONTENT=0
+          TOTAL_MODULES=0
+          
+          for module_dir in src/core/*/; do
+            if [ -d "$module_dir" ] && [ "$(basename "$module_dir")" != "shared" ]; then
+              TOTAL_MODULES=$((TOTAL_MODULES + 1))
+              module_name=$(basename "$module_dir")
+              
+              echo "📂 Verificando módulo: $module_name"
+              
+              # Contar archivos en el módulo (excluyendo directorios vacíos)
+              FILE_COUNT=$(find "$module_dir" -name "*.js" -o -name "*.jsx" -o -name "*.ts" -o -name "*.tsx" | wc -l)
+              
+              if [ "$FILE_COUNT" -gt 0 ]; then
+                MODULES_WITH_CONTENT=$((MODULES_WITH_CONTENT + 1))
+                echo "  ✅ $module_name tiene $FILE_COUNT archivos"
+              else
+                echo "  ⚠️  $module_name está vacío"
+              fi
+            fi
+          done
+          
+          echo "📊 Módulos con contenido: $MODULES_WITH_CONTENT/$TOTAL_MODULES"
+          
+          if [ "$MODULES_WITH_CONTENT" -eq 0 ]; then
+            echo "❌ ERROR: Ningún módulo tiene contenido. No se puede promover a main."
+            exit 1
+          fi
+          
+          # Requerir al menos 1 módulo con contenido para pasar a main
+          if [ "$MODULES_WITH_CONTENT" -lt 1 ]; then
+            echo "❌ ERROR: Se requiere al menos 1 módulo con contenido para promover a main"
+            exit 1
+          fi
+          
+          echo "✅ Validación de contenido pasó: $MODULES_WITH_CONTENT módulos tienen contenido"
+          echo "modules_with_content=$MODULES_WITH_CONTENT" >> $GITHUB_OUTPUT
+          echo "total_modules=$TOTAL_MODULES" >> $GITHUB_OUTPUT
+
+      - name: 🏗️ Build for Production
+        run: |
+          echo "🏗️ Building for production..."
+          npm run build
+          echo "✅ Build completado exitosamente"
+
+      - name: 📊 Generate Production Report
+        run: |
+          echo "📊 Generando reporte de producción..."
+          
+          echo "## 🚀 Production Readiness Report" > production-report.md
+          echo "" >> production-report.md
+          echo "- ✅ Structure validation: **PASSED**" >> production-report.md
+          echo "- ✅ Build process: **PASSED**" >> production-report.md
+          echo "- ✅ Content validation: **PASSED**" >> production-report.md
+          echo "- 📊 Modules with content: **${{ steps.content-validation.outputs.modules_with_content }}/${{ steps.content-validation.outputs.total_modules }}**" >> production-report.md
+          echo "" >> production-report.md
+          echo "### Module Status:" >> production-report.md
+          
+          for module_dir in src/core/*/; do
+            if [ -d "$module_dir" ] && [ "$(basename "$module_dir")" != "shared" ]; then
+              module_name=$(basename "$module_dir")
+              FILE_COUNT=$(find "$module_dir" -name "*.js" -o -name "*.jsx" -o -name "*.ts" -o -name "*.tsx" | wc -l)
+              
+              if [ "$FILE_COUNT" -gt 0 ]; then
+                echo "- ✅ **$module_name**: $FILE_COUNT files" >> production-report.md
+              else
+                echo "- ⚠️ **$module_name**: Empty module" >> production-report.md
+              fi
+            fi
+          done
+
+      - name: 📤 Upload Production Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-readiness-report
+          path: production-report.md
+
+      - name: 💬 Comment Production Report on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            
+            let comment = `## 🚀 Production Readiness Report\\n\\n`;
+            comment += `✅ **Ready for Main Branch!**\\n\\n`;
+            comment += `📊 **Validation Results:**\\n`;
+            comment += `- Structure Tests: ✅ PASSED\\n`;
+            comment += `- Content Validation: ✅ PASSED\\n`;
+            comment += `- Production Build: ✅ PASSED\\n`;
+            comment += `- Modules with Content: **${{ steps.content-validation.outputs.modules_with_content }}/${{ steps.content-validation.outputs.total_modules }}**\\n\\n`;
+            
+            comment += `🎯 **This PR is approved for production deployment!**\\n\\n`;
+            comment += `🔗 [View detailed report in Actions](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  auto-promote-to-main:
+    name: 🔄 Auto-promote to Main
+    runs-on: ubuntu-latest
+    needs: [validate-for-production]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/developer'
+    
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: 🚀 Create PR to Main
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: existingPRs } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              head: 'developer',
+              base: 'main',
+              state: 'open'
+            });
+
+            if (existingPRs.length === 0) {
+              const { data: pr } = await github.rest.pulls.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: '🚀 Deploy to Production',
+                head: 'developer',
+                base: 'main',
+                body: `## 🚀 Automated Production Deployment
+
+                This PR was automatically created after successful validation on the \`developer\` branch.
+
+                ### ✅ Pre-deployment Validations Completed:
+                - Structure tests passed
+                - All modules validated
+                - Content validation passed
+                - Production build successful
+
+                ### 📋 Review Checklist:
+                - [ ] Code review completed
+                - [ ] All tests passing
+                - [ ] Documentation updated
+                - [ ] Ready for production
+
+                **Auto-generated from developer branch**
+                `
+              });
+
+              console.log(\`Created PR #\${pr.number}: \${pr.html_url}\`);
+            } else {
+              console.log('PR from developer to main already exists');
+            }

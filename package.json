@@ -9,6 +9,7 @@
     "@testing-library/user-event": "^13.5.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
+    "react-router-dom": "^7.8.0",
     "react-scripts": "5.0.1",
     "web-vitals": "^2.1.4"
   },
@@ -16,6 +17,14 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
+    "test:structure": "vitest run tests/structure --reporter=verbose",
+    "test:structure:watch": "vitest tests/structure --reporter=verbose",
+    "test:structure:ui": "vitest tests/structure --ui",
+    "test:all": "npm run test:structure && npm run test",
+    "test:ci": "npm run test:structure -- --reporter=json --outputFile=structure-report.json",
+    "validate": "npx tsc --noEmit && npm run test:structure",
+    "validate:full": "npx tsc --noEmit && npm run test:structure && npm run build",
+    "check-status": "node check-status.js",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
@@ -35,5 +44,18 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.2.1",
+    "@types/react": "^19.1.10",
+    "@types/react-dom": "^19.1.7",
+    "@vitest/ui": "^3.2.4",
+    "autoprefixer": "^10.4.21",
+    "jsdom": "^26.1.0",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^4.9.5",
+    "vitest": "^3.2.4"
   }
 }
