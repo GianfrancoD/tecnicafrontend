@@ -485,4 +485,4 @@ Esta prueba técnica está diseñada para evaluar tus habilidades reales de desa
 
 ---
 
-*Creado con ❤️ para evaluar desarrolladores frontend talentosos*
+*Creado con ❤️ para evaluar desarrolladores frontend*
