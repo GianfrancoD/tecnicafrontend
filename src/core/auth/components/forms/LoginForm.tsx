@@ -128,3 +128,4 @@ const LoginForm: React.FC = () => {
 };
 
 export default LoginForm;
+console.log('Testing CI/CD pipeline');
