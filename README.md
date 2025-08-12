@@ -18,7 +18,7 @@ Este proyecto es una **prueba técnica frontend** que implementa una aplicación
 - Cada módulo debe tener las 8 carpetas requeridas
 
 ### 2. **Resolución de Errores (50 puntos)** 
-- Identificar y corregir **2 errores principales** (8 errores de TypeScript en total)
+- Identificar y corregir **todos los errores de TypeScript**
 - Hacer que la aplicación funcione sin warnings ni errores
 
 ### 3. **Testing Dinámico (25 puntos)**
@@ -61,60 +61,49 @@ Este proyecto contiene **múltiples tipos de errores** que debes identificar y c
 
 ---
 
-## 🔴 **ERRORES DE TYPESCRIPT (10 errores totales)**
+## 🎯 **ERRORES A IDENTIFICAR Y RESOLVER**
 
-### ❌ **Error Principal 1: LoginForm.tsx (6 errores)**
-**Archivo**: `src/core/auth/components/forms/LoginForm.tsx`  
-**Problema**: Uso incorrecto de `FormData` nativo en lugar de tipo personalizado  
-**Síntomas**: Múltiples errores sobre propiedades inexistentes
+Este proyecto contiene **errores intencionalmente insertados** que debes encontrar y corregir:
 
-```typescript
-// ❌ Incorrecto (línea ~8)
-const [formData, setFormData] = useState<FormData>({
-  email: '',
-  password: ''
-});
+### 🔍 **Metodología de Resolución**
 
-// ✅ Correcto - usar el tipo adecuado
-interface LoginFormData {
-  email: string;
-  password: string;
-}
-const [formData, setFormData] = useState<LoginFormData>({
-  email: '',
-  password: ''
-});
-```
+1. **Ejecuta las validaciones** para ver los errores:
+   ```bash
+   npm run validate:typescript
+   npm run test:structure
+   ```
 
-**Errores específicos**:
-- `Property 'email' does not exist on type 'FormData'` (línea 29, 34, 69)
-- `Property 'password' does not exist on type 'FormData'` (línea 29, 34, 85)
-- `Argument of type... is not assignable` (línea 8)
+2. **Analiza los mensajes de error** - contienen toda la información necesaria
 
-### ❌ **Error Principal 2: productApi.ts (1 error)**
-**Archivo**: `src/core/products/services/productApi.ts`  
-**Problema**: Método `searchProducts` declarado pero no implementado  
-**Usado en**: `src/core/products/hooks/useProducts.ts` línea 106
+3. **Identifica los patrones** - hay errores de tipos y errores de estructura
 
-```typescript
-// ❌ Problema: useProducts.ts intenta usar método inexistente
-const results = await productApi.searchProducts(searchTerm);
+4. **Corrige sistemáticamente** usando tu conocimiento de TypeScript y arquitectura
 
-// ✅ Solución: Implementar en productApi.ts
-searchProducts: async (query: string): Promise<Product[]> => {
-  // Simular búsqueda filtrada
-  const allProducts = await this.getProducts();
-  return allProducts.filter(product => 
-    product.name.toLowerCase().includes(query.toLowerCase()) ||
-    product.description.toLowerCase().includes(query.toLowerCase())
-  );
-}
-```
+### 🚨 **Tipos de Errores Presentes**
 
-### ❌ **Errores Secundarios: Imports rotos (3 errores)**
-Estos errores aparecen por carpetas faltantes (ver sección de estructura):
-- `Dashboard.tsx`: No encuentra `../common/NavigationHeader`
-- `ProductsView.tsx`: No encuentra NavigationHeader
+#### **Errores de TypeScript**
+- **Tipos incorrectos**: Uso de tipos nativos donde se necesitan tipos personalizados
+- **Métodos faltantes**: Servicios que declaran métodos no implementados  
+- **Imports rotos**: Referencias a archivos/carpetas que no existen
+- **Inconsistencias**: Interfaces que no coinciden con su uso
+
+#### **Errores de Estructura**
+- **Carpetas faltantes**: Módulos incompletos según los estándares definidos
+- **Archivos requeridos**: Componentes referenciados pero no presentes
+- **Arquitectura**: Estructura de directorios que no cumple las convenciones
+
+### 📍 **Archivos Clave para Revisar**
+
+**Para errores de TypeScript, revisa**:
+- `src/core/auth/components/forms/LoginForm.tsx`
+- `src/core/products/services/productApi.ts`
+- `src/core/products/hooks/useProducts.ts`
+- Archivos de componentes que usen servicios o contextos
+
+**Para errores de estructura, revisa**:
+- Carpetas faltantes en módulos `auth`, `products` y `shared`
+- Referencias a componentes en carpetas `common`
+- Imports que fallan por rutas inexistentes
 
 ---
 
@@ -326,7 +315,7 @@ tecnicafrontend/
 │   │   │
 │   │   ├── auth/                    # 🔐 Módulo autenticación
 │   │   │   ├── components/
-│   │   │   │   ├── forms/           # ❌ LoginForm (Error 3,4)
+│   │   │   │   ├── forms/           # LoginForm y otros formularios
 │   │   │   │   ├── common/
 │   │   │   │   ├── views/
 │   │   │   │   └── cards/
@@ -340,7 +329,7 @@ tecnicafrontend/
 │   │   │
 │   │   ├── dashboard/               # 📊 Módulo dashboard  
 │   │   │   ├── components/
-│   │   │   │   └── views/           # ❌ Dashboard (Error 1,2)
+│   │   │   │   └── views/           # Dashboard principal
 │   │   │   └── [otras carpetas...]
 │   │   │
 │   │   └── products/                # 📦 Módulo productos
@@ -374,9 +363,10 @@ tecnicafrontend/
 
 ### Paso 1: Identificar Errores (25 pts)
 1. **Ejecutar** `npm start` → Observar errores en consola
-2. **Revisar** archivos mencionados en la sección "Errores"
-3. **Corregir** uno por uno hasta que la app funcione
-4. **Verificar** que no haya warnings en la consola
+2. **Ejecutar validaciones** → `npm run validate:typescript`
+3. **Analizar mensajes de error** para identificar archivos problemáticos
+4. **Corregir sistemáticamente** hasta que la app funcione
+5. **Verificar** que no haya warnings en la consola
 
 ### Paso 2: Validar Testing (25 pts)  
 1. **Ejecutar** `npm run test:structure`
@@ -427,13 +417,13 @@ npm run test               # Tests unitarios (React)
 - ✅ Mejoras o funcionalidades adicionales
 
 ### Bueno (70-89 pts)  
-- ✅ 3-4 errores corregidos
+- ✅ Mayoría de errores corregidos
 - ✅ Tests mayormente pasando
 - ✅ Funcionalidad básica funcionando
 - ✅ Entendimiento general del proyecto
 
 ### Aceptable (50-69 pts)
-- ✅ 2-3 errores corregidos  
+- ✅ Varios errores corregidos  
 - ✅ Algunos tests pasando
 - ✅ App ejecutándose básicamente
 - ⚠️ Necesita ayuda para CI/CD
