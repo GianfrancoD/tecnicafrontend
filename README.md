@@ -55,63 +55,127 @@ npm start
 
 ---
 
-## 🐛 Errores a Resolver
+## 🐛 Errores Intencionales a Resolver
 
-El proyecto tiene **2 errores principales de TypeScript** que debes encontrar y corregir:
+Este proyecto contiene **múltiples tipos de errores** que debes identificar y corregir:
 
-### ❌ Error 1: Tipo Incorrecto en LoginForm
+---
+
+## 🔴 **ERRORES DE TYPESCRIPT (10 errores totales)**
+
+### ❌ **Error Principal 1: LoginForm.tsx (6 errores)**
 **Archivo**: `src/core/auth/components/forms/LoginForm.tsx`  
-**Línea**: ~7  
-**Error**: Usa `FormData` (tipo nativo del navegador) en lugar de `LoginFormData`  
-**Síntoma**: 7 errores de TypeScript sobre propiedades que no existen
+**Problema**: Uso incorrecto de `FormData` nativo en lugar de tipo personalizado  
+**Síntomas**: Múltiples errores sobre propiedades inexistentes
 
 ```typescript
-// ❌ Incorrecto
+// ❌ Incorrecto (línea ~8)
 const [formData, setFormData] = useState<FormData>({
   email: '',
   password: ''
 });
 
-// ✅ Correcto  
+// ✅ Correcto - usar el tipo adecuado
+interface LoginFormData {
+  email: string;
+  password: string;
+}
 const [formData, setFormData] = useState<LoginFormData>({
   email: '',
   password: ''
 });
 ```
 
-**Errores que causa**:
-- `Property 'email' does not exist on type 'FormData'`
-- `Property 'password' does not exist on type 'FormData'`
-- Y 5 errores más relacionados
+**Errores específicos**:
+- `Property 'email' does not exist on type 'FormData'` (línea 29, 34, 69)
+- `Property 'password' does not exist on type 'FormData'` (línea 29, 34, 85)
+- `Argument of type... is not assignable` (línea 8)
 
-### ❌ Error 2: Método Faltante en productApi
+### ❌ **Error Principal 2: productApi.ts (1 error)**
 **Archivo**: `src/core/products/services/productApi.ts`  
-**Línea**: N/A (método faltante)  
-**Error**: El hook `useProducts` intenta llamar `productApi.searchProducts()` pero no existe  
-**Síntoma**: `Property 'searchProducts' does not exist on type 'ProductApiService'`
+**Problema**: Método `searchProducts` declarado pero no implementado  
+**Usado en**: `src/core/products/hooks/useProducts.ts` línea 106
 
 ```typescript
-// ❌ Problema: En useProducts.ts se intenta usar
+// ❌ Problema: useProducts.ts intenta usar método inexistente
 const results = await productApi.searchProducts(searchTerm);
 
-// ✅ Solución: Agregar el método en productApi.ts
+// ✅ Solución: Implementar en productApi.ts
 searchProducts: async (query: string): Promise<Product[]> => {
-  // Implementar búsqueda
+  // Simular búsqueda filtrada
+  const allProducts = await this.getProducts();
+  return allProducts.filter(product => 
+    product.name.toLowerCase().includes(query.toLowerCase()) ||
+    product.description.toLowerCase().includes(query.toLowerCase())
+  );
 }
 ```
 
-### 📝 Cómo Identificar los Errores
+### ❌ **Errores Secundarios: Imports rotos (3 errores)**
+Estos errores aparecen por carpetas faltantes (ver sección de estructura):
+- `Dashboard.tsx`: No encuentra `../common/NavigationHeader`
+- `ProductsView.tsx`: No encuentra NavigationHeader
 
-1. **Ejecuta el verificador de TypeScript**:
+---
+
+## 📁 **ERRORES DE ESTRUCTURA (5 tests fallando)**
+
+### 🗂️ **Carpetas eliminadas intencionalmente:**
+
 ```bash
-npx tsc --noEmit
+# CARPETAS FALTANTES QUE DEBES CREAR:
+
+src/core/auth/
+├── validations/     # ❌ FALTA - Para validaciones de formularios
+└── hooks/           # ❌ FALTA - Para custom hooks de autenticación
+
+src/core/products/ 
+└── utils/           # ❌ FALTA - Para utilidades del módulo
+
+src/core/shared/
+└── common/          # ❌ FALTA - Para componentes comunes compartidos
+
+src/core/dashboard/components/
+└── common/          # ❌ FALTA - Carpeta eliminada (rompe imports)
 ```
 
-2. **Lee cuidadosamente los errores**:
-   - 7 errores en `LoginForm.tsx` (todos relacionados con tipos)
-   - 1 error en `useProducts.ts` (método faltante)
+### 📊 **Estado actual de módulos:**
+- ✅ **dashboard**: 8/8 carpetas (100%) - **ÚNICO VÁLIDO**
+- ❌ **auth**: 6/8 carpetas (75%) - faltan: `validations`, `hooks`
+- ❌ **products**: 7/8 carpetas (87.5%) - falta: `utils` 
+- ❌ **shared**: 3/4 carpetas (75%) - falta: `common`
 
-3. **Sigue las pistas de TypeScript** para encontrar las soluciones
+### 🎯 **Requisitos estrictos:**
+Cada módulo DEBE tener las **8 carpetas obligatorias**:
+- `components/` (con al menos 1 subcarpeta)
+- `validations/` 
+- `hooks/`
+- `services/`
+- `types/`
+- `utils/`
+- `contexts/`
+- `constants/`
+
+---
+
+## ✅ **Cómo verificar tu progreso:**
+
+```bash
+# Verificación rápida (TypeScript + estructura)
+npm run validate
+
+# Verificación completa (incluye build)
+npm run validate:full
+
+# Status detallado con colores y estadísticas  
+npm run check-status
+```
+
+### 📋 **Orden recomendado de corrección:**
+1. **Crear carpetas faltantes** (arregla imports rotos)
+2. **Corregir errores TypeScript** principales
+3. **Verificar que tests de estructura pasen**
+4. **Verificar que build funcione**
 
 ---
 

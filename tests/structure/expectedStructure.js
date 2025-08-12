@@ -55,7 +55,7 @@ export const TESTING_CONFIG = {
     excludeFolders: ['shared'],
     
     // Mínimo número de carpetas requeridas para considerar algo como módulo
-    minimumRequiredFolders: 6, // De las 8 requeridas, al menos 6 deben existir
+    minimumRequiredFolders: 8, // TODAS las 8 carpetas deben existir
     
     // Si debe validar que components/ tenga al menos una subcarpeta
     requireComponentsSubfolders: true,
