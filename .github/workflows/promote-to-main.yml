@@ -2,10 +2,12 @@ name: 🚀 Promote to Main
 
 on:
   pull_request:
-    branches: 
+    branches:
       - main
+      - developer
+      - develop
     types: [opened, synchronize, reopened]
-    
+
   push:
     branches:
       - developer
@@ -14,20 +16,20 @@ on:
   workflow_dispatch:
     inputs:
       force_deploy:
-        description: 'Force deploy to main'
+        description: "Force deploy to main"
         required: false
-        default: 'false'
+        default: false
         type: boolean
 
 env:
-  NODE_VERSION: '18'
+  NODE_VERSION: "18"
 
 jobs:
   validate-for-production:
     name: 🔍 Production Validation
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' && (github.base_ref == 'main' || github.head_ref == 'developer')
-    
+    if: github.event_name == 'pull_request' && (github.base_ref == 'main' || github.base_ref == 'developer' || github.base_ref == 'develop')
+
     steps:
       - name: 📥 Checkout Repository
         uses: actions/checkout@v4
@@ -37,29 +39,71 @@ jobs:
       - name: 🏷️ Extract Branch Info
         id: branch-info
         run: |
-          echo "source_branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
-          echo "target_branch=${GITHUB_BASE_REF:-main}" >> $GITHUB_OUTPUT
-          echo "is_developer_branch=$([[ ${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}} == developer ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+          SOURCE_BRANCH="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
+          echo "source_branch=$SOURCE_BRANCH" >> $GITHUB_OUTPUT
+          echo "target_branch=${GITHUB_BASE_REF:-developer}" >> $GITHUB_OUTPUT
+
+          # Identificar tipo de rama
+          case "$SOURCE_BRANCH" in
+            feature/*|feat/*|bugfix/*|hotfix/*)
+              echo "is_valid_branch_type=true" >> $GITHUB_OUTPUT
+              echo "branch_type=${SOURCE_BRANCH%%/*}" >> $GITHUB_OUTPUT
+              echo "is_developer_branch=false" >> $GITHUB_OUTPUT
+              ;;
+            developer)
+              echo "is_valid_branch_type=true" >> $GITHUB_OUTPUT
+              echo "branch_type=core" >> $GITHUB_OUTPUT
+              echo "is_developer_branch=true" >> $GITHUB_OUTPUT
+              ;;
+            develop|main)
+              echo "is_valid_branch_type=true" >> $GITHUB_OUTPUT
+              echo "branch_type=core" >> $GITHUB_OUTPUT
+              echo "is_developer_branch=false" >> $GITHUB_OUTPUT
+              ;;
+            *)
+              echo "is_valid_branch_type=false" >> $GITHUB_OUTPUT
+              echo "branch_type=unknown" >> $GITHUB_OUTPUT
+              echo "is_developer_branch=false" >> $GITHUB_OUTPUT
+              ;;
+          esac
 
       - name: ✅ Validate Source Branch
         run: |
           echo "🌿 Source: ${{ steps.branch-info.outputs.source_branch }}"
           echo "🎯 Target: ${{ steps.branch-info.outputs.target_branch }}"
-          
+
+          SOURCE="${{ steps.branch-info.outputs.source_branch }}"
+          TARGET="${{ steps.branch-info.outputs.target_branch }}"
+
           # Solo permitir developer -> main
-          if [ "${{ steps.branch-info.outputs.target_branch }}" == "main" ] && [ "${{ steps.branch-info.outputs.source_branch }}" != "developer" ]; then
+          if [ "$TARGET" == "main" ] && [ "$SOURCE" != "developer" ]; then
             echo "❌ ERROR: Solo la rama 'developer' puede hacer PR hacia 'main'"
-            echo "   Rama origen actual: ${{ steps.branch-info.outputs.source_branch }}"
+            echo "   Rama origen actual: $SOURCE"
             exit 1
           fi
-          
-          echo "✅ Rama origen válida para producción"
+
+          # Para developer/develop, validar tipos de rama permitidos
+          if [ "$TARGET" == "developer" ] || [ "$TARGET" == "develop" ]; then
+            case "$SOURCE" in
+              feature/*|feat/*|bugfix/*|hotfix/*|developer|develop)
+                echo "✅ Tipo de rama válido: $SOURCE -> $TARGET"
+                ;;
+              *)
+                echo "❌ ERROR: Solo se permiten ramas feature/*, feat/*, bugfix/*, hotfix/* hacia developer/develop"
+                echo "   Rama origen actual: $SOURCE"
+                echo "   Tipos permitidos: feature/*, feat/*, bugfix/*, hotfix/*"
+                exit 1
+                ;;
+            esac
+          fi
+
+          echo "✅ Validación de rama exitosa"
 
       - name: ⚡ Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+          cache: "npm"
 
       - name: 🔧 Install Dependencies
         run: |
@@ -84,11 +128,11 @@ jobs:
         id: content-validation
         run: |
           echo "🔍 Validando contenido de módulos..."
-          
+
           # Verificar que los módulos no estén vacíos
           MODULES_WITH_CONTENT=0
           TOTAL_MODULES=0
-          
+
           for module_dir in src/core/*/; do
             if [ -d "$module_dir" ] && [ "$(basename "$module_dir")" != "shared" ]; then
               TOTAL_MODULES=$((TOTAL_MODULES + 1))
@@ -107,20 +151,20 @@ jobs:
               fi
             fi
           done
-          
+
           echo "📊 Módulos con contenido: $MODULES_WITH_CONTENT/$TOTAL_MODULES"
-          
+
           if [ "$MODULES_WITH_CONTENT" -eq 0 ]; then
             echo "❌ ERROR: Ningún módulo tiene contenido. No se puede promover a main."
             exit 1
           fi
-          
+
           # Requerir al menos 1 módulo con contenido para pasar a main
           if [ "$MODULES_WITH_CONTENT" -lt 1 ]; then
             echo "❌ ERROR: Se requiere al menos 1 módulo con contenido para promover a main"
             exit 1
           fi
-          
+
           echo "✅ Validación de contenido pasó: $MODULES_WITH_CONTENT módulos tienen contenido"
           echo "modules_with_content=$MODULES_WITH_CONTENT" >> $GITHUB_OUTPUT
           echo "total_modules=$TOTAL_MODULES" >> $GITHUB_OUTPUT
@@ -134,7 +178,7 @@ jobs:
       - name: 📊 Generate Production Report
         run: |
           echo "📊 Generando reporte de producción..."
-          
+
           echo "## 🚀 Production Readiness Report" > production-report.md
           echo "" >> production-report.md
           echo "- ✅ Structure validation: **PASSED**" >> production-report.md
@@ -143,7 +187,7 @@ jobs:
           echo "- 📊 Modules with content: **${{ steps.content-validation.outputs.modules_with_content }}/${{ steps.content-validation.outputs.total_modules }}**" >> production-report.md
           echo "" >> production-report.md
           echo "### Module Status:" >> production-report.md
-          
+
           for module_dir in src/core/*/; do
             if [ -d "$module_dir" ] && [ "$(basename "$module_dir")" != "shared" ]; then
               module_name=$(basename "$module_dir")
@@ -163,24 +207,39 @@ jobs:
           name: production-readiness-report
           path: production-report.md
 
-      - name: 💬 Comment Production Report on PR
+      - name: 💬 Comment Validation Report on PR
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
           script: |
-            const fs = require('fs');
-            
-            let comment = `## 🚀 Production Readiness Report\\n\\n`;
-            comment += `✅ **Ready for Main Branch!**\\n\\n`;
-            comment += `📊 **Validation Results:**\\n`;
-            comment += `- Structure Tests: ✅ PASSED\\n`;
-            comment += `- Content Validation: ✅ PASSED\\n`;
-            comment += `- Production Build: ✅ PASSED\\n`;
-            comment += `- Modules with Content: **${{ steps.content-validation.outputs.modules_with_content }}/${{ steps.content-validation.outputs.total_modules }}**\\n\\n`;
-            
-            comment += `🎯 **This PR is approved for production deployment!**\\n\\n`;
+            const targetBranch = '${{ steps.branch-info.outputs.target_branch }}';
+            const sourceBranch = '${{ steps.branch-info.outputs.source_branch }}';
+            const branchType = '${{ steps.branch-info.outputs.branch_type }}';
+
+            let comment = `## 🔍 Validation Report\\n\\n`;
+
+            if (targetBranch === 'main') {
+              comment += `🚀 **Ready for Production Deployment!**\\n\\n`;
+              comment += `📈 **Production Validation Results:**\\n`;
+              comment += `- Structure Tests: ✅ PASSED\\n`;
+              comment += `- Content Validation: ✅ PASSED\\n`;
+              comment += `- Production Build: ✅ PASSED\\n`;
+              comment += `- Modules with Content: **${{ steps.content-validation.outputs.modules_with_content }}/${{ steps.content-validation.outputs.total_modules }}**\\n\\n`;
+              comment += `🎯 **This PR is approved for production deployment!**\\n\\n`;
+            } else {
+              comment += `✅ **Ready for Integration to ${targetBranch}!**\\n\\n`;
+              comment += `🏷️ **Branch Info:**\\n`;
+              comment += `- Source: \`${sourceBranch}\` (${branchType})\\n`;
+              comment += `- Target: \`${targetBranch}\`\\n\\n`;
+              comment += `📈 **Validation Results:**\\n`;
+              comment += `- Structure Tests: ✅ PASSED\\n`;
+              comment += `- TypeScript Check: ✅ PASSED\\n`;
+              comment += `- Build Process: ✅ PASSED\\n\\n`;
+              comment += `🎉 **This PR is ready to be merged to ${targetBranch}!**\\n\\n`;
+            }
+
             comment += `🔗 [View detailed report in Actions](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})`;
-            
+
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
@@ -193,7 +252,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [validate-for-production]
     if: github.event_name == 'push' && github.ref == 'refs/heads/developer'
-    
+
     steps:
       - name: 📥 Checkout Repository
         uses: actions/checkout@v4

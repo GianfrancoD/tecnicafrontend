@@ -2,39 +2,38 @@ name: 🏗️ Complete CI/CD Pipeline
 
 on:
   pull_request:
-    branches: 
+    branches:
       - developer
       - develop
-      - main
     types: [opened, synchronize, reopened]
     paths:
-      - 'src/core/**'
-      - 'tests/**'
-      
+      - "src/core/**"
+      - "tests/**"
+
   push:
     branches:
       - developer
       - develop
     paths:
-      - 'src/core/**'
+      - "src/core/**"
 
   # Permitir ejecución manual
   workflow_dispatch:
     inputs:
       debug:
-        description: 'Enable debug mode'
+        description: "Enable debug mode"
         required: false
-        default: 'false'
+        default: false
         type: boolean
 
 env:
-  NODE_VERSION: '18'
+  NODE_VERSION: "18"
 
 jobs:
   structure-validation:
     name: 🔍 Validate Core Structure
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: 📥 Checkout Repository
         uses: actions/checkout@v4
@@ -44,27 +43,44 @@ jobs:
       - name: 🏷️ Extract Branch Info
         id: branch-info
         run: |
-          echo "source_branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
+          SOURCE_BRANCH="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
+          echo "source_branch=$SOURCE_BRANCH" >> $GITHUB_OUTPUT
           echo "target_branch=${GITHUB_BASE_REF:-developer}" >> $GITHUB_OUTPUT
-          echo "is_feature_branch=$([[ ${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}} == feature/* ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
 
-      - name: 📊 Show Branch Information
+          # Identificar tipo de rama
+          case "$SOURCE_BRANCH" in
+            feature/*|feat/*|bugfix/*|hotfix/*)
+              echo "is_valid_branch_type=true" >> $GITHUB_OUTPUT
+              echo "branch_type=${SOURCE_BRANCH%%/*}" >> $GITHUB_OUTPUT
+              ;;
+            developer|develop|main)
+              echo "is_valid_branch_type=true" >> $GITHUB_OUTPUT
+              echo "branch_type=core" >> $GITHUB_OUTPUT
+              ;;
+            *)
+              echo "is_valid_branch_type=false" >> $GITHUB_OUTPUT
+              echo "branch_type=unknown" >> $GITHUB_OUTPUT
+              ;;
+          esac
+
+      - name: 📈 Show Branch Information
         run: |
           echo "🌿 Source Branch: ${{ steps.branch-info.outputs.source_branch }}"
           echo "🎯 Target Branch: ${{ steps.branch-info.outputs.target_branch }}"
-          echo "🔧 Is Feature Branch: ${{ steps.branch-info.outputs.is_feature_branch }}"
+          echo "🏷️ Branch Type: ${{ steps.branch-info.outputs.branch_type }}"
+          echo "✅ Valid Branch Type: ${{ steps.branch-info.outputs.is_valid_branch_type }}"
 
       - name: ⚡ Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+          cache: "npm"
 
       - name: 🔧 Install Dependencies
         run: |
           echo "📦 Installing dependencies..."
           npm ci --prefer-offline --no-audit
-          
+
       - name: 🔍 TypeScript Validation
         id: typescript-check
         run: |
@@ -83,7 +99,7 @@ jobs:
         run: |
           echo "📊 Generando reporte de estructura..."
           npm run test:ci || echo "⚠️ Tests fallaron, pero continuamos para generar reporte"
-          
+
       - name: 📤 Upload Structure Report
         uses: actions/upload-artifact@v4
         if: always()
@@ -98,10 +114,10 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           echo "🔍 Analizando cambios en estructura..."
-          
+
           # Verificar si hay cambios en la estructura core
           CORE_CHANGES=$(git diff --name-only origin/${{ steps.branch-info.outputs.target_branch }}...HEAD | grep '^src/core/' || echo "")
-          
+
           if [ -n "$CORE_CHANGES" ]; then
             echo "📁 Cambios detectados en src/core/:"
             echo "$CORE_CHANGES"
@@ -117,27 +133,44 @@ jobs:
           echo "🔧 Validando flujo de ramas..."
           echo "🌿 Source: ${{ steps.branch-info.outputs.source_branch }}"
           echo "🎯 Target: ${{ steps.branch-info.outputs.target_branch }}"
-          
+
+          SOURCE="${{ steps.branch-info.outputs.source_branch }}"
+          TARGET="${{ steps.branch-info.outputs.target_branch }}"
+
           # Solo permitir developer -> main
-          if [ "${{ steps.branch-info.outputs.target_branch }}" == "main" ] && [ "${{ steps.branch-info.outputs.source_branch }}" != "developer" ]; then
+          if [ "$TARGET" == "main" ] && [ "$SOURCE" != "developer" ]; then
             echo "❌ ERROR: Solo la rama 'developer' puede hacer PR hacia 'main'"
-            echo "   Rama origen actual: ${{ steps.branch-info.outputs.source_branch }}"
+            echo "   Rama origen actual: $SOURCE"
             exit 1
           fi
-          
-          # Feature branches pueden ir a developer
-          if [[ "${{ steps.branch-info.outputs.source_branch }}" == feature/* ]] && [ "${{ steps.branch-info.outputs.target_branch }}" == "developer" ]; then
-            echo "✅ Feature branch -> developer: VÁLIDO"
-          elif [ "${{ steps.branch-info.outputs.source_branch }}" == "developer" ] && [ "${{ steps.branch-info.outputs.target_branch }}" == "main" ]; then
+
+          # Para developer/develop, validar tipos de rama permitidos
+          if [ "$TARGET" == "developer" ] || [ "$TARGET" == "develop" ]; then
+            case "$SOURCE" in
+              feature/*|feat/*|bugfix/*|hotfix/*)
+                echo "✅ Tipo de rama válido: $SOURCE -> $TARGET"
+                ;;
+              developer|develop)
+                echo "✅ Rama core válida: $SOURCE -> $TARGET"
+                ;;
+              *)
+                echo "❌ ERROR: Solo se permiten ramas feature/*, feat/*, bugfix/*, hotfix/* hacia developer/develop"
+                echo "   Rama origen actual: $SOURCE"
+                echo "   Tipos permitidos: feature/*, feat/*, bugfix/*, hotfix/*"
+                exit 1
+                ;;
+            esac
+          elif [ "$SOURCE" == "developer" ] && [ "$TARGET" == "main" ]; then
             echo "✅ Developer -> main: VÁLIDO"
           else
-            echo "✅ Flujo de rama válido"
+            echo "✅ Flujo de rama válido para otros casos"
+          fi
           fi
 
       - name: 🎯 Final Validation
         run: |
           echo "🎯 Validación final completa..."
-          
+
           # Verificar TypeScript primero
           if [ "${{ steps.typescript-check.outcome }}" != "success" ]; then
             echo "❌ Los tipos TypeScript fallaron. Re-ejecutando para obtener detalles..."
@@ -147,7 +180,7 @@ jobs:
               exit 1
             }
           fi
-          
+
           # Re-ejecutar tests si fallaron antes
           if [ "${{ steps.structure-tests.outcome }}" != "success" ]; then
             echo "❌ Los tests de estructura fallaron. Re-ejecutando para obtener detalles..."
@@ -157,7 +190,7 @@ jobs:
               exit 1
             }
           fi
-          
+
           echo "✅ Validación completa exitosa - PR puede ser aprobado"
 
       - name: 💬 Comment on PR
@@ -168,27 +201,27 @@ jobs:
             const fs = require('fs');
             const success = '${{ steps.structure-tests.outcome }}' === 'success';
             const coreChanges = process.env.core_changes === 'true';
-            
+
             let comment = `## 🏗️ Structure Validation Report\n\n`;
-            
+
             if (success) {
               comment += `✅ **Structure validation passed!**\n\n`;
             } else {
               comment += `❌ **Structure validation failed!**\n\n`;
             }
-            
+
             comment += `📊 **Details:**\n`;
             comment += `- Source: \`${{ steps.branch-info.outputs.source_branch }}\`\n`;
             comment += `- Target: \`${{ steps.branch-info.outputs.target_branch }}\`\n`;
             comment += `- Core changes: ${coreChanges ? '✅ Yes' : '❌ No'}\n`;
-            
+
             if (!success) {
               comment += `\n⚠️ **Action required:** Please fix the structure issues before merging.\n`;
               comment += `📋 Check the "Structure Validation" job details for specific errors.\n`;
             }
-            
+
             comment += `\n🔗 [View full report in Actions](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})`;
-            
+
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
