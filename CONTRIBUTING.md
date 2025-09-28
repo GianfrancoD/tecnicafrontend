@@ -2,17 +2,6 @@
 
 ¡Gracias por tu interés en contribuir a **TecnicaFrontend**! Este documento te guiará a través del proceso de contribución a nuestro proyecto de prueba técnica.
 
-## 📋 Tabla de Contenidos
-
-- [Código de Conducta](#código-de-conducta)
-- [Cómo Contribuir](#cómo-contribuir)
-- [Configuración del Entorno](#configuración-del-entorno)
-- [Flujo de Trabajo](#flujo-de-trabajo)
-- [Estándares de Código](#estándares-de-código)
-- [Testing](#testing)
-- [Commits y Pull Requests](#commits-y-pull-requests)
-- [Reportar Issues](#reportar-issues)
-
 ## Código de Conducta
 
 Este proyecto adhiere a nuestro [Código de Conducta](./CODE_OF_CONDUCT.md). Al participar, se espera que mantengas estos estándares.
