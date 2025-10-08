@@ -1,11 +1,11 @@
 // Vista principal para gestionar productos
 
-import React, { useState, useEffect } from 'react';
-import { useProducts } from '../../hooks/useProducts';
-import { productApi } from '../../services/productApi';
-import { Product, ProductCategory } from '../../types/product.types';
-import ProductCard from '../cards/ProductCard';
-import NavigationHeader from '../../../dashboard/components/common/NavigationHeader';
+import React, { useState, useEffect } from "react";
+import { useProducts } from "../../hooks/useProducts";
+import { productApi } from "../../services/productApi";
+import { Product, ProductCategory } from "../../types/product.types";
+import ProductCard from "../cards/ProductCard";
+import NavigationHeader from "../../../../dashboard/components/common/NavigationHeader";
 
 interface ProductStats {
   total: number;
@@ -23,12 +23,12 @@ const ProductsView: React.FC = () => {
     searchProducts,
     clearFilters,
     deleteProduct,
-    setError
+    setError,
   } = useProducts();
 
   const [categories, setCategories] = useState<ProductCategory[]>([]);
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [stats, setStats] = useState<ProductStats | null>(null);
 
   // Cargar categorías y estadísticas
@@ -37,12 +37,12 @@ const ProductsView: React.FC = () => {
       try {
         const [categoriesData, statsData] = await Promise.all([
           productApi.getCategories(),
-          productApi.getProductStats()
+          productApi.getProductStats(),
         ]);
         setCategories(categoriesData);
         setStats(statsData);
       } catch (err) {
-        console.error('Error loading data:', err);
+        console.error("Error loading data:", err);
       }
     };
 
@@ -63,7 +63,9 @@ const ProductsView: React.FC = () => {
 
   // Manejar eliminación de producto
   const handleDeleteProduct = async (product: Product): Promise<void> => {
-    if (window.confirm(`¿Estás seguro de que quieres eliminar "${product.name}"?`)) {
+    if (
+      window.confirm(`¿Estás seguro de que quieres eliminar "${product.name}"?`)
+    ) {
       const success = await deleteProduct(product.id);
       if (success) {
         // Actualizar estadísticas después de eliminar
@@ -71,7 +73,7 @@ const ProductsView: React.FC = () => {
           const newStats = await productApi.getProductStats();
           setStats(newStats);
         } catch (err) {
-          console.error('Error updating stats:', err);
+          console.error("Error updating stats:", err);
         }
       }
     }
@@ -79,15 +81,15 @@ const ProductsView: React.FC = () => {
 
   // Limpiar filtros
   const handleClearFilters = (): void => {
-    setSearchTerm('');
-    setSelectedCategory('');
+    setSearchTerm("");
+    setSelectedCategory("");
     clearFilters();
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <NavigationHeader 
-        title="Gestión de Productos" 
+      <NavigationHeader
+        title="Gestión de Productos"
         subtitle="Administra el catálogo de productos de la tienda"
       />
 
@@ -101,7 +103,9 @@ const ProductsView: React.FC = () => {
           </div>
           <button
             className="bg-brand-primary hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
-            onClick={() => alert('Crear nuevo producto (funcionalidad pendiente)')}
+            onClick={() =>
+              alert("Crear nuevo producto (funcionalidad pendiente)")
+            }
           >
             <span>➕</span>
             Nuevo Producto
@@ -119,8 +123,12 @@ const ProductsView: React.FC = () => {
                   </div>
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Total Productos</p>
-                  <p className="text-2xl font-semibold text-gray-900">{stats.total}</p>
+                  <p className="text-sm font-medium text-gray-500">
+                    Total Productos
+                  </p>
+                  <p className="text-2xl font-semibold text-gray-900">
+                    {stats.total}
+                  </p>
                 </div>
               </div>
             </div>
@@ -134,7 +142,9 @@ const ProductsView: React.FC = () => {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-500">En Stock</p>
-                  <p className="text-2xl font-semibold text-gray-900">{stats.inStock}</p>
+                  <p className="text-2xl font-semibold text-gray-900">
+                    {stats.inStock}
+                  </p>
                 </div>
               </div>
             </div>
@@ -148,7 +158,9 @@ const ProductsView: React.FC = () => {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-500">Sin Stock</p>
-                  <p className="text-2xl font-semibold text-gray-900">{stats.outOfStock}</p>
+                  <p className="text-2xl font-semibold text-gray-900">
+                    {stats.outOfStock}
+                  </p>
                 </div>
               </div>
             </div>
@@ -161,8 +173,12 @@ const ProductsView: React.FC = () => {
                   </div>
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Categorías</p>
-                  <p className="text-2xl font-semibold text-gray-900">{stats.categories}</p>
+                  <p className="text-sm font-medium text-gray-500">
+                    Categorías
+                  </p>
+                  <p className="text-2xl font-semibold text-gray-900">
+                    {stats.categories}
+                  </p>
                 </div>
               </div>
             </div>
@@ -196,7 +212,7 @@ const ProductsView: React.FC = () => {
               onChange={(e) => handleCategoryFilter(e.target.value)}
             >
               <option value="">Todas las categorías</option>
-              {categories.map(category => (
+              {categories.map((category) => (
                 <option key={category.id} value={category.id}>
                   {category.name}
                 </option>
@@ -224,7 +240,8 @@ const ProductsView: React.FC = () => {
                 )}
                 {filters.category && (
                   <span className="bg-brand-primary text-white text-xs px-2 py-1 rounded-full">
-                    Categoría: {categories.find(c => c.id === filters.category)?.name}
+                    Categoría:{" "}
+                    {categories.find((c) => c.id === filters.category)?.name}
                   </span>
                 )}
               </div>
@@ -266,10 +283,9 @@ const ProductsView: React.FC = () => {
                   No hay productos
                 </h3>
                 <p className="text-gray-500">
-                  {filters.search || filters.category 
-                    ? 'No se encontraron productos con los filtros aplicados.'
-                    : 'No hay productos en el catálogo.'
-                  }
+                  {filters.search || filters.category
+                    ? "No se encontraron productos con los filtros aplicados."
+                    : "No hay productos en el catálogo."}
                 </p>
                 {(filters.search || filters.category) && (
                   <button
@@ -287,13 +303,15 @@ const ProductsView: React.FC = () => {
                     Productos ({products.length})
                   </h2>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {products.map(product => (
+                  {products.map((product) => (
                     <ProductCard
                       key={product.id}
                       product={product}
-                      onView={(product) => alert(`Ver detalles de: ${product.name}`)}
+                      onView={(product) =>
+                        alert(`Ver detalles de: ${product.name}`)
+                      }
                       onEdit={(product) => alert(`Editar: ${product.name}`)}
                       onDelete={handleDeleteProduct}
                     />

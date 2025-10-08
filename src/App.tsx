@@ -7,10 +7,10 @@ import {
 } from "react-router-dom";
 import { AuthProvider } from "./core/auth/contexts/AuthContext";
 import LoginForm from "./core/auth/components/views/login/LoginForm";
-import Dashboard from "./core/dashboard/components/views/Dashboard";
 import ProductsView from "./core/products/components/views/ProductsView";
 import ProtectedRoute from "./core/auth/components/common/ProtectedRoute";
 import "./App.css";
+import { Dashboard } from "./core/dashboard/components/views/Dashboard";
 
 const App: React.FC = () => {
   return (
