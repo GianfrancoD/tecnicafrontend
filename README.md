@@ -68,7 +68,7 @@ npm start
 ### **1. Diagnóstico Inicial**
 ```bash
 # Ejecutar para identificar errores
-npm run validate:typescript    # Errores de tipos
+npm run validate    # Errores de tipos
 npm run test:structure        # Errores de estructura
 npm start                      # Ver errores en consola
 ```
